@@ -67,3 +67,6 @@ Other Options:
 - **Persistent Sessions**: Leverages Playwright's persistent browser context using your logged-in profile.
 - **System Chrome**: Bypasses downloaded Playwright binaries to use native macOS Google Chrome.
 - **Proxy Support**: Respects `HTTPS_PROXY` settings for x.com access.
+
+## Agent Skill
+Copy `SKILL.md` to your favorite Agents (Claud Code, Gemini CLI, XXXClaw, etc).
