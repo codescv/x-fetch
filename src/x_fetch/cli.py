@@ -1,12 +1,48 @@
 import typer
 from pathlib import Path
 import json
-from .scraper import fetch_posts
+from .scraper import fetch_posts, open_for_login
 
 app = typer.Typer(help="X (Twitter) automator tool based on python playwright.")
 
 @app.command()
+def login(
+    user_data_dir: Path = typer.Option(
+        Path.home() / "Documents" / "x-fetch",
+        "--user-data-dir",
+        dir_okay=True,
+        help="Path to the Playwright user data directory"
+    ),
+    http_proxy: str = typer.Option(None, "--http-proxy", help="HTTP proxy server"),
+    https_proxy: str = typer.Option(None, "--https-proxy", help="HTTPS proxy server"),
+    no_proxy: str = typer.Option(None, "--no-proxy", help="Comma-separated bypass domains"),
+    executable_path: str = typer.Option(
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--executable-path",
+        help="Path to the browser executable"
+    )
+):
+    """
+    Open X.com in a headed browser to allow manual login.
+    """
+    typer.echo("Opening browser for login. Please complete login, then close browser or press Ctrl+C.")
+    try:
+        open_for_login(
+            user_data_dir=user_data_dir,
+            http_proxy=http_proxy,
+            https_proxy=https_proxy,
+            no_proxy=no_proxy,
+            executable_path=executable_path
+        )
+    except KeyboardInterrupt:
+        typer.echo("\\nLogin process interrupted.")
+    except Exception as e:
+        typer.secho(f"Error during login: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     query: str = typer.Option(None, "--query", help="Search query on X"),
     handle: str = typer.Option(None, "--handle", help="Fetch posts from a specific user profile"),
     following: bool = typer.Option(False, "--following", help="Fetch from the 'Following' timeline"),
@@ -36,6 +72,9 @@ def main(
     """
     Fetch top K posts from X (Twitter).
     """
+    if ctx.invoked_subcommand is not None:
+        return
+
     sources = [s for s in [query, handle, following, recommended] if s]
     if len(sources) != 1:
         typer.secho("Error: You must provide exactly one of --query, --handle, --following, or --recommended", fg=typer.colors.RED, err=True)

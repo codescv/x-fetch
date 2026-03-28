@@ -101,6 +101,34 @@ def fetch_posts(
             
             page.goto(target_url, wait_until="domcontentloaded")
             
+            # Wait for either tweets or login elements to appear
+            try:
+                page.wait_for_selector('[data-testid="tweet"], a[data-testid="loginButton"]', timeout=10000)
+            except Exception:
+                pass
+                
+            # Check if we are logged out. Usually indicated by URL or login buttons
+            is_logged_out = False
+            if "i/flow/login" in page.url:
+                is_logged_out = True
+            elif "explore" in page.url and "explore" not in target_url:
+                # Redirected to explore instead of the search/home page
+                is_logged_out = True
+            else:
+                try:
+                    # Check for login buttons
+                    login_btn = page.query_selector('a[data-testid="loginButton"]')
+                    if login_btn:
+                        is_logged_out = True
+                except Exception:
+                    pass
+
+            if is_logged_out:
+                print("Error: You are not logged in or cannot view X.com properly.")
+                print("Please run the login command first:")
+                print(f"x-fetch login --user-data-dir '{user_data_dir}'")
+                return []
+
             # Handle timeline tabs if needed
             if following or recommended:
                 try:
@@ -112,13 +140,6 @@ def fetch_posts(
                     page.wait_for_timeout(2000) # Wait for timeline to switch
                 except Exception as e:
                     print(f"Failed to switch to {tab_name} tab: {e}")
-
-            # Wait for the first tweet or at least a few seconds for X to load results
-            try:
-                page.wait_for_selector('[data-testid="tweet"]', timeout=20000)
-            except Exception as e:
-                # If X prompts for login, or there's some overlay blocking, we will still try to parse
-                pass
                 
             retries = 0
             try:
@@ -292,3 +313,46 @@ def fetch_posts(
                 pass
             
     return fetched_posts[:count]
+
+def open_for_login(
+    user_data_dir: Path,
+    http_proxy: Optional[str] = None,
+    https_proxy: Optional[str] = None,
+    no_proxy: Optional[str] = None,
+    executable_path: Optional[str] = None,
+) -> None:
+    """
+    Open X.com in a headed browser to allow the user to log in.
+    """
+    proxy = get_proxy_settings(http_proxy, https_proxy, no_proxy)
+
+    with sync_playwright() as p:
+        browser_info: Dict[str, Any] = {
+            "user_data_dir": str(user_data_dir),
+            "headless": False,
+        }
+        if executable_path:
+            browser_info["executable_path"] = executable_path
+        if proxy:
+            browser_info["proxy"] = proxy
+
+        context = p.chromium.launch_persistent_context(**browser_info)
+        
+        try:
+            pages = context.pages
+            page = pages[0] if len(pages) > 0 else context.new_page()
+            
+            print("Opening X.com... Please log in.")
+            page.goto("https://x.com/", wait_until="domcontentloaded")
+            print("Browser is open in headed mode.")
+            print("Close the browser manually or press Ctrl+C in this terminal when you are done.")
+            
+            page.wait_for_event("close", timeout=0)
+        except Exception as e:
+            if "Target page, context or browser has been closed" not in str(e) and "Target closed" not in str(e):
+                print(f"Browser closed: {e}")
+        finally:
+            try:
+                context.close()
+            except Exception:
+                pass

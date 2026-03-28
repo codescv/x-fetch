@@ -40,6 +40,15 @@ def test_cli_basic(mock_fetch_posts):
 @patch("x_fetch.cli.fetch_posts")
 def test_cli_missing_source(mock_fetch_posts):
     # No source provided
-    result = runner.invoke(app, ["--count", "5"])
-    assert result.exit_code != 0
-    assert "Error: You must provide exactly one of --query, --handle, --following, or --recommended" in result.output
+        result = runner.invoke(app, ["--count", "5"])
+        assert result.exit_code != 0
+        assert "Error: You must provide exactly one of --query, --handle, --following, or --recommended" in result.output
+
+@patch("x_fetch.cli.open_for_login")
+def test_cli_login(mock_open_for_login):
+    result = runner.invoke(app, ["login", "--user-data-dir", "/tmp/test-dir"])
+    assert result.exit_code == 0
+    assert "Opening browser for login" in result.stdout
+    mock_open_for_login.assert_called_once()
+    kwargs = mock_open_for_login.call_args.kwargs
+    assert kwargs["user_data_dir"] == Path("/tmp/test-dir")

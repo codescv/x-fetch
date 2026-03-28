@@ -21,6 +21,24 @@ uv run x-fetch --help
 
 ## Usage
 
+### 1. Authentication
+
+Before fetching from timelines or searching, log into X.com:
+
+```bash
+x-fetch login --user-data-dir ~/Documents/x-fetch
+```
+This opens a headed browser window where you can enter your credentials. Once logged in, close the browser or press `Ctrl+C`. This saves your session for future interactions.
+
+If you skip this step, fetching commands may abort with:
+```
+Error: You are not logged in or cannot view X.com properly.
+Please run the login command first:
+x-fetch login --user-data-dir '~/Documents/x-fetch'
+```
+
+### 2. Fetching Output
+
 ```bash
 x-fetch --query "agentic AI" --count 5
 x-fetch --handle "tim_cook" --output-format json

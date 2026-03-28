@@ -8,7 +8,7 @@ The tool is split into two primary layers:
 
 ## Playwright Approach
 
-- **Persistent Context**: Uses `launch_persistent_context` to retain cookies, local storage, and active sessions so the user won’t have to log into X (Twitter) for each scrape.
+- **Persistent Context**: Uses `launch_persistent_context` to retain cookies, local storage, and active sessions so the user won’t have to log into X (Twitter) for each scrape. Users must initially perform `x-fetch login` to seed this session.
 - **System Browser**: Uses the local `/Applications/Google Chrome.app/...` executable to avoid Playwright binary restrictions or missing downloads.
 - **Proxy Settings**: The `get_proxy_settings()` function explicitly forces routing through proxy.
 - **Source Routing**: Handles navigation directly via JS or URLs depending on target. (e.g., `/search` for queries, `/{handle}` for users, `/home` then tab-clicking for timelines).
