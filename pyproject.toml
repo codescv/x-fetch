@@ -1,0 +1,27 @@
+[project]
+name = "x-fetch"
+version = "0.1.0"
+description = "X (Twitter) automator tool based on python playwright"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "playwright",
+    "typer>=0.24.1",
+]
+
+[project.scripts]
+x-fetch = "x_fetch.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

@@ -1,0 +1,14 @@
+# Rules
+- Use `uv` to manage dependencies.
+- Use `pyproject.toml` with entry script called `x-fetch`. 
+- For configurable params, use command line parameters with reasonable defaults.
+- No hard coded literals and magic numbers. Use constant variabels
+- I will update your `pyproject.toml` with `tool.uv.index` settings. This is needed for my system so don't delete it.
+- Use directory structure that supports `uv tool install git+<git-repo>` to install the tool. The source code should be in `src/x_fetch/`.
+- Use `typer` to parse command line args.
+- Use type annotations.
+- Write docstrings for every function. Write inline documentation for complex logic.
+- Write extensive unit tests for every feature.
+- **Automatically run your code and fix bugs** using screenshots, console logs etc before notifying the user.
+- Keep code clean and modular. If a module is too large, split it into smaller modules. If a class is too large, split it into smaller classes. If a function is too large, split it into smaller functions.
+- Keep documentation up to date: `Readme.md` for end user and `Design.md` for developer.
