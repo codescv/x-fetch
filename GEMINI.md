@@ -9,6 +9,6 @@
 - Use type annotations.
 - Write docstrings for every function. Write inline documentation for complex logic.
 - Write extensive unit tests for every feature.
-- **Automatically run your code and fix bugs** using screenshots, console logs etc before notifying the user.
+- Don't just run the unit tests, **Automatically run your code and fix bugs** using screenshots, console logs. Notify the user only after you have verified that it works.
 - Keep code clean and modular. If a module is too large, split it into smaller modules. If a class is too large, split it into smaller classes. If a function is too large, split it into smaller functions.
 - Keep documentation up to date: `Readme.md` for end user and `Design.md` for developer.
