@@ -8,7 +8,21 @@ runner = CliRunner()
 
 @patch("x_fetch.cli.fetch_posts")
 def test_cli_basic(mock_fetch_posts):
-    mock_fetch_posts.return_value = [{"author": "Test Author", "text": "Post 1", "post_link": "", "is_repost": False, "social_context": "", "comments": "1", "retweets": "2", "likes": "3", "links": []}]
+    mock_fetch_posts.return_value = [{
+        "author_name": "Test Author", 
+        "author_handle": "@test",
+        "posted_at": "Just now",
+        "text": "Post 1", 
+        "post_link": "", 
+        "is_repost": False, 
+        "repost_by": "", 
+        "comments": "1", 
+        "retweets": "2", 
+        "likes": "3", 
+        "links": [],
+        "attachments": [],
+        "comments_data": []
+    }]
     
     result = runner.invoke(app, ["--query", "test query", "--count", "1"])
     

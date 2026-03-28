@@ -11,8 +11,10 @@ def main(
     handle: str = typer.Option(None, "--handle", help="Fetch posts from a specific user profile"),
     following: bool = typer.Option(False, "--following", help="Fetch from the 'Following' timeline"),
     recommended: bool = typer.Option(False, "--recommended", help="Fetch from the 'For you' timeline"),
-    output: str = typer.Option("text", "--output", help="Output format (text, json)"),
+    output_format: str = typer.Option("text", "--output-format", help="Output format (text, json)"),
+    output: Path = typer.Option(None, "--output", help="Path to write output to file"),
     screenshot: str = typer.Option(None, "--screenshot", help="Path to save a screenshot before returning"),
+    with_comments: bool = typer.Option(False, "--with-comments", help="Fetch top replies for each post"),
     count: int = typer.Option(10, "--count", help="Number of posts to fetch"),
     user_data_dir: Path = typer.Option(
         Path.home() / "Documents" / "x-fetch",
@@ -39,11 +41,11 @@ def main(
         typer.secho("Error: You must provide exactly one of --query, --handle, --following, or --recommended", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
-    if output not in ["text", "json"]:
+    if output_format not in ["text", "json"]:
         typer.secho("Error: Output format must be 'text' or 'json'", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
-    if output == "text":
+    if output_format == "text":
         typer.echo(f"Fetching top {count} posts...")
         typer.echo(f"Using user data directory: {user_data_dir}")
     
@@ -61,26 +63,51 @@ def main(
             executable_path=executable_path,
             debug=debug,
             wait_on_exit=wait_on_exit,
-            screenshot_path=screenshot
+            screenshot_path=screenshot,
+            with_comments=with_comments
         )
         
-        if output == "json":
-            typer.echo(json.dumps(posts, indent=2, ensure_ascii=False))
+        result_text = ""
+        if output_format == "json":
+            result_text = json.dumps(posts, indent=2, ensure_ascii=False)
         else:
-            typer.echo(f"\nSuccessfully fetched {len(posts)} posts.\n")
-            
+            lines = [f"\\nSuccessfully fetched {len(posts)} posts.\\n"]
             for i, post in enumerate(posts, start=1):
-                typer.echo(f"--- Post {i} ---")
-                typer.echo(f"Author: {post.get('author')}")
+                lines.append(f"--- Post {i} ---")
+                lines.append(f"Author: {post.get('author_name')} ({post.get('author_handle')}) · {post.get('posted_at')}")
                 if post.get('is_repost'):
-                    typer.echo(f"Reposted. Context: {post.get('social_context')}")
-                typer.echo(f"Text:\n{post.get('text')}")
+                    lines.append(f"Reposted. Context: {post.get('repost_by')}")
+                lines.append(f"Text:\\n{post.get('text')}")
                 if post.get('post_link'):
-                    typer.echo(f"Link: {post.get('post_link')}")
-                typer.echo(f"Comments: {post.get('comments')} | Retweets: {post.get('retweets')} | Likes: {post.get('likes')}")
+                    lines.append(f"Link: {post.get('post_link')}")
+                lines.append(f"Comments: {post.get('comments')} | Retweets: {post.get('retweets')} | Likes: {post.get('likes')}")
+                
+                attachments = post.get('attachments', [])
+                if attachments:
+                    lines.append(f"Attachments: {len(attachments)} item(s)")
                 if post.get('links'):
-                    typer.echo(f"Contained Links: {', '.join(post.get('links'))}")
-                typer.echo("-" * 40)
+                    lines.append(f"Contained Links: {', '.join(post.get('links'))}")
+                    
+                comments_data = post.get('comments_data', [])
+                if comments_data:
+                    lines.append("\\n  [Replies]")
+                    for j, c in enumerate(comments_data, start=1):
+                        lines.append(f"  {j}. {c.get('author_name')} ({c.get('author_handle')}): {c.get('text')}")
+                        
+                lines.append("-" * 40)
+            result_text = "\\n".join(lines)
+            
+        if output:
+            try:
+                with open(output, "w", encoding="utf-8") as f:
+                    f.write(result_text)
+                typer.echo(f"Output successfully written to {output}")
+            except Exception as e:
+                typer.secho(f"Error writing to file: {e}", fg=typer.colors.RED, err=True)
+                raise typer.Exit(code=1)
+                
+        if debug or not output:
+            typer.echo(result_text)
             
     except Exception as e:
         typer.secho(f"Error fetching posts: {e}", fg=typer.colors.RED, err=True)

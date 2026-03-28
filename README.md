@@ -23,9 +23,9 @@ uv run x-fetch --help
 
 ```bash
 x-fetch --query "agentic AI" --count 5
-x-fetch --handle "tim_cook" --output json
-x-fetch --following --count 20
-x-fetch --recommended
+x-fetch --handle "tim_cook" --output-format json
+x-fetch --following --count 20 --with-comments
+x-fetch --recommended --output results.json --output-format json
 ```
 
 ### Options
@@ -38,7 +38,9 @@ Fetch Source (You must provide exactly one):
 
 Other Options:
 - `--count INTEGER`: Number of posts to fetch (default: 10).
-- `--output TEXT`: Output format: `text` or `json` (default: `text`).
+- `--with-comments`: Navigate into each post and fetch its top replies.
+- `--output-format TEXT`: Output format: `text` or `json` (default: `text`).
+- `--output PATH`: Optional path to write output directly to a file (instead of stdout).
 - `--user-data-dir PATH`: Path to the Playwright user data directory (default: `~/Documents/x-fetch`). This allows the script to use a logged-in session.
 - `--screenshot PATH`: Optional path to save a full-page Chrome screenshot before returning.
 
