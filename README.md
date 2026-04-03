@@ -44,6 +44,7 @@ x-fetch --query "agentic AI" --count 5
 x-fetch --handle "tim_cook" --output-format json
 x-fetch --following --count 20 --with-comments
 x-fetch --recommended --output results.json --output-format json
+x-fetch post https://x.com/karpathy/status/2039805659525644595
 ```
 
 ### Options

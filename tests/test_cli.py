@@ -52,3 +52,35 @@ def test_cli_login(mock_open_for_login):
     mock_open_for_login.assert_called_once()
     kwargs = mock_open_for_login.call_args.kwargs
     assert kwargs["user_data_dir"] == Path("/tmp/test-dir")
+
+@patch("x_fetch.cli.fetch_single_post")
+def test_cli_post(mock_fetch_single_post):
+    mock_fetch_single_post.return_value = {
+        "post": {
+            "author_name": "Post Author",
+            "author_handle": "@post_author",
+            "text": "Main post",
+            "post_link": "https://x.com/post"
+        },
+        "comments": [
+            {
+                "author_name": "Comment Author",
+                "author_handle": "@comment_author",
+                "text": "Comment text",
+                "post_link": "https://x.com/comment"
+            }
+        ]
+    }
+    
+    result = runner.invoke(app, ["post", "https://x.com/karpathy/status/2039805659525644595"])
+    
+    assert result.exit_code == 0
+    assert "Fetching post from https://x.com/karpathy/status/2039805659525644595" in result.stdout
+    assert "--- Post ---" in result.stdout
+    assert "Author: Post Author" in result.stdout
+    assert "--- Comments (1) ---" in result.stdout
+    assert "Comment Author" in result.stdout
+    
+    mock_fetch_single_post.assert_called_once()
+    kwargs = mock_fetch_single_post.call_args.kwargs
+    assert kwargs["url"] == "https://x.com/karpathy/status/2039805659525644595"

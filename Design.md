@@ -17,3 +17,9 @@ The tool is split into two primary layers:
 ## Testing Strategy
 - The CLI component is unit tested via Playwright mocks, verifying that parameters are correctly parsed and passed.
 - The default test directory structure ensures `uv run pytest` seamlessly executes CLI unit tests (`test_cli.py`) and Scraper unit tests (`test_scraper.py`).
+
+## Single Post Fetching
+
+- **Direct Navigation**: Unlike feed scraping, single post fetching navigates directly to the post URL.
+- **Shared Extraction Logic**: Uses the same `TWEET_EXTRACTION_JS` constant. The first element is the main post, and subsequent elements are comments.
+- **Scrolling**: Implements scrolling to fetch more comments, appending new unique comments to the list.

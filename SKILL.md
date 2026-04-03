@@ -11,7 +11,7 @@ This skill provides instructions for installing and using `x-fetch`, a Python CL
 
 Check if `x-fetch` command is executable, if not, install using this command:
 ```bash
-uv tool install git+https://github.com/codescv/x-fetch.git
+which x-fetch || uv tool install --default-index https://pypi.org/simple git+https://github.com/codescv/x-fetch.git
 ```
 
 ## Prerequisites
@@ -38,7 +38,13 @@ Fetch from the logged-in user's timelines.
 - **Following**: `x-fetch --following --count 20`
 - **Recommended (For You)**: `x-fetch --recommended --count 20`
 
-### 4. Advanced Options
+### 4. Fetch Single Post and Comments
+Fetch a specific post and its comments using the post URL.
+```bash
+x-fetch post "https://x.com/username/status/123456789"
+```
+
+### 5. Advanced Options
 - **With Comments**: Include top replies for each post.
   `x-fetch --query "GPT-5" --with-comments`
 - **Output Format**: Save results as JSON for programmatic processing.

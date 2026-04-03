@@ -6,6 +6,70 @@ from playwright.sync_api import sync_playwright
 
 import os
 
+TWEET_EXTRACTION_JS = """() => {
+    const tweets = document.querySelectorAll('[data-testid="tweet"]');
+    return Array.from(tweets).map(t => {
+        const getText = (selector) => {
+            const el = t.querySelector(selector);
+            return el ? el.innerText : "";
+        };
+
+        const text = getText('[data-testid="tweetText"]');
+        const authorRaw = getText('[data-testid="User-Name"]');
+        const authorParts = authorRaw.split('\\n');
+        const authorName = authorParts.length > 0 ? authorParts[0] : "";
+        const authorHandle = authorParts.length > 1 ? authorParts[1] : "";
+        let postedAt = "";
+        if (authorParts.length > 3) postedAt = authorParts[3];
+        else if (authorParts.length > 2) postedAt = authorParts[2];
+        
+        const textEl = t.querySelector('[data-testid="tweetText"]');
+        const links = textEl ? Array.from(textEl.querySelectorAll('a')).map(a => a.href) : [];
+        
+        const attachments = [];
+        const photoEls = Array.from(t.querySelectorAll('[data-testid="tweetPhoto"] img'));
+        const videoEls = Array.from(t.querySelectorAll('video'));
+        photoEls.forEach(img => { if(img.src) attachments.push({type: 'image', url: img.src}) });
+        videoEls.forEach(vid => { if(vid.src) attachments.push({type: 'video', url: vid.src}) });
+
+        const timeEl = t.querySelector('a[dir="ltr"] time');
+        const postLink = timeEl && timeEl.parentElement ? timeEl.parentElement.href : "";
+        
+        const getMetric = (testId) => {
+            const el = t.querySelector(`[data-testid="${testId}"]`);
+            return el ? (el.getAttribute('aria-label') || el.innerText || "") : "";
+        };
+        const comments = getMetric('reply');
+        const retweets = getMetric('retweet');
+        const likes = getMetric('like');
+        
+        const socialContext = t.querySelector('[data-testid="socialContext"]');
+        let repostBy = "";
+        if (socialContext) {
+            const match = socialContext.innerText.match(/(.+) reposted/i);
+            if (match) repostBy = match[1].trim();
+        }
+        
+        const uniqueId = postLink || text + authorName;
+
+        return {
+            id: uniqueId,
+            author_name: authorName,
+            author_handle: authorHandle,
+            posted_at: postedAt,
+            text: text,
+            links: links,
+            attachments: attachments,
+            post_link: postLink,
+            comments: comments,
+            retweets: retweets,
+            likes: likes,
+            is_repost: !!repostBy,
+            repost_by: repostBy
+        };
+    });
+}"""
+
 def get_proxy_settings(
     http_proxy: Optional[str] = None,
     https_proxy: Optional[str] = None,
@@ -144,79 +208,7 @@ def fetch_posts(
             retries = 0
             try:
                 while len(fetched_posts) < count and retries < 10:
-                    new_posts = page.evaluate('''() => {
-                        const tweets = document.querySelectorAll('[data-testid="tweet"]');
-                        return Array.from(tweets).map(t => {
-                            // Safe extraction helper
-                            const getText = (selector) => {
-                                const el = t.querySelector(selector);
-                                return el ? el.innerText : "";
-                            };
-
-                            const text = getText('[data-testid="tweetText"]');
-                            
-                            // Author breakdown
-                            const authorRaw = getText('[data-testid="User-Name"]');
-                            const authorParts = authorRaw.split('\\n');
-                            const authorName = authorParts.length > 0 ? authorParts[0] : "";
-                            const authorHandle = authorParts.length > 1 ? authorParts[1] : "";
-                            // Timestamp might be at index 2 if there's no dot, or 3 if there is a dot
-                            let postedAt = "";
-                            if (authorParts.length > 3) postedAt = authorParts[3];
-                            else if (authorParts.length > 2) postedAt = authorParts[2];
-                            
-                            // Links inside tweet text
-                            const textEl = t.querySelector('[data-testid="tweetText"]');
-                            const links = textEl ? Array.from(textEl.querySelectorAll('a')).map(a => a.href) : [];
-                            
-                            // Attachments (Images and Videos)
-                            const attachments = [];
-                            const photoEls = Array.from(t.querySelectorAll('[data-testid="tweetPhoto"] img'));
-                            const videoEls = Array.from(t.querySelectorAll('video'));
-                            photoEls.forEach(img => { if(img.src) attachments.push({type: 'image', url: img.src}) });
-                            videoEls.forEach(vid => { if(vid.src) attachments.push({type: 'video', url: vid.src}) });
-
-                            // Timestamp / Link to post
-                            const timeEl = t.querySelector('a[dir="ltr"] time');
-                            const postLink = timeEl && timeEl.parentElement ? timeEl.parentElement.href : "";
-                            
-                            // Comments, Retweets, Likes
-                            const getMetric = (testId) => {
-                                const el = t.querySelector(`[data-testid="${testId}"]`);
-                                return el ? (el.getAttribute('aria-label') || el.innerText || "") : "";
-                            };
-                            const comments = getMetric('reply');
-                            const retweets = getMetric('retweet');
-                            const likes = getMetric('like');
-                            
-                            // Repost By logic
-                            const socialContext = t.querySelector('[data-testid="socialContext"]');
-                            let repostBy = "";
-                            if (socialContext) {
-                                const match = socialContext.innerText.match(/(.+) reposted/i);
-                                if (match) repostBy = match[1].trim();
-                            }
-                            
-                            // Identifier for uniqueness
-                            const uniqueId = postLink || text + authorName;
-
-                            return {
-                                id: uniqueId,
-                                author_name: authorName,
-                                author_handle: authorHandle,
-                                posted_at: postedAt,
-                                text: text,
-                                links: links,
-                                attachments: attachments,
-                                post_link: postLink,
-                                comments: comments,
-                                retweets: retweets,
-                                likes: likes,
-                                is_repost: !!repostBy,
-                                repost_by: repostBy
-                            };
-                        });
-                    }''')
+                    new_posts = page.evaluate(TWEET_EXTRACTION_JS)
                     
                     added_any = False
                     for post_data in new_posts:
@@ -352,6 +344,100 @@ def open_for_login(
             if "Target page, context or browser has been closed" not in str(e) and "Target closed" not in str(e):
                 print(f"Browser closed: {e}")
         finally:
+            try:
+                context.close()
+            except Exception:
+                pass
+
+def fetch_single_post(
+    url: str,
+    user_data_dir: Path,
+    http_proxy: Optional[str] = None,
+    https_proxy: Optional[str] = None,
+    no_proxy: Optional[str] = None,
+    executable_path: Optional[str] = None,
+    debug: bool = False,
+    wait_on_exit: bool = False,
+    screenshot_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Fetch a single post and its comments from X.com using post URL.
+    """
+    proxy = get_proxy_settings(http_proxy, https_proxy, no_proxy)
+    
+    with sync_playwright() as p:
+        browser_info: Dict[str, Any] = {
+            "user_data_dir": str(user_data_dir),
+            "headless": not debug,
+        }
+        if executable_path:
+            browser_info["executable_path"] = executable_path
+        if proxy:
+            browser_info["proxy"] = proxy
+            
+        context = p.chromium.launch_persistent_context(**browser_info)
+        
+        try:
+            pages = context.pages
+            page = pages[0] if len(pages) > 0 else context.new_page()
+            
+            page.goto(url, wait_until="domcontentloaded")
+            
+            try:
+                page.wait_for_selector('[data-testid="tweet"]', timeout=10000)
+            except Exception:
+                pass
+                
+            posts = page.evaluate(TWEET_EXTRACTION_JS)
+            if not posts:
+                print("No posts found. You might need to login or check the URL.")
+                return {}
+                
+            main_post = posts[0]
+            comments = posts[1:]
+            
+            seen_comment_ids = set(c['id'] for c in comments)
+            all_comments = list(comments)
+            
+            # Scroll for more comments
+            retries = 0
+            while retries < 3: # Scroll 3 times or until no new comments
+                page.evaluate('window.scrollBy(0, document.body.scrollHeight);')
+                page.wait_for_timeout(2000)
+                new_posts = page.evaluate(TWEET_EXTRACTION_JS)
+                
+                added_any = False
+                for p_data in new_posts:
+                    if p_data['id'] != main_post['id'] and p_data['id'] not in seen_comment_ids:
+                        seen_comment_ids.add(p_data['id'])
+                        all_comments.append(p_data)
+                        added_any = True
+                        
+                if not added_any:
+                    retries += 1
+                else:
+                    retries = 0
+                    
+            if wait_on_exit:
+                import time
+                print("\nWaiting on exit... Press Ctrl+C to close the browser.")
+                try:
+                    while True:
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    print("\nClosing browser...")
+                    
+            return {
+                "post": main_post,
+                "comments": all_comments
+            }
+            
+        finally:
+            if screenshot_path:
+                try:
+                    page.screenshot(path=screenshot_path, full_page=True)
+                except Exception:
+                    pass
             try:
                 context.close()
             except Exception:
